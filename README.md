@@ -1,7 +1,7 @@
-    # TeslaSwift
+# TeslaSwift
 Swift library to access Tesla API based on [Tesla JSON API (Unofficial)](https://tesla-api.timdorr.com)
 
-[![Swift](https://img.shields.io/badge/Swift-5.0-orange.svg?style=flat)](https://swift.org)
+[![Swift](https://img.shields.io/badge/Swift-5.1-orange.svg?style=flat)](https://swift.org)
 [![Build Status](https://travis-ci.org/jonasman/TeslaSwift.svg?branch=master)](https://travis-ci.org/jonasman/TeslaSwift)
 [![TeslaSwift](https://img.shields.io/cocoapods/v/TeslaSwift.svg)](https://github.com/jonasman/TeslaSwift)
 
@@ -28,6 +28,11 @@ If you need Combine extensions, use this line
 ```ruby
 pod 'TeslaSwift/Combine', '~> 6'
 ```
+If you need Rx extensions, use this line
+
+```ruby
+pod 'TeslaSwift/Rx', '~> 6'
+```
 
 ### Swift Package Manager
 
@@ -36,6 +41,8 @@ You can use [Swift Package Manager](https://swift.org/package-manager/) and spec
 ```swift
 .Package(url: "https://github.com/jonasman/TeslaSwift.git", majorVersion: 6)
 ```
+
+There are also extensions for Combine `TeslaSwiftCombine`, PromiseKit `TeslaSwiftPMK` and Rx `TeslaSwiftRx`
 
 ## Usage
 
@@ -55,13 +62,16 @@ Import the module
 import TeslaSwift
 ```
 
-With SPM import the extension modules if needed
+Add the extension modules as needed (with the previous line)
 
 ```swift
-import TeslaSwiftPromiseKit
+import TeslaSwiftPMK
 ```
 ```swift
 import TeslaSwiftCombine
+```
+```swift
+import TeslaSwiftRx
 ```
 
 Perform an authentication with your My Tesla credentials: 

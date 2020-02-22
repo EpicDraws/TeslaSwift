@@ -63,6 +63,28 @@ extension TeslaSwift {
         return future
     }
     
+    public func getVehicle(_ vehicleID: String) -> Future<Vehicle, Error> {
+           
+           let future = Future<Vehicle,Error> { (subscriber: @escaping (Result<Vehicle, Error>) -> Void) in
+               
+               self.getVehicle(vehicleID, completion: self.resultify(subscriber: subscriber))
+               
+           }
+           
+           return future
+       }
+    
+    public func getVehicle(_ vehicle: Vehicle) -> Future<Vehicle, Error> {
+        
+        let future = Future<Vehicle,Error> { (subscriber: @escaping (Result<Vehicle, Error>) -> Void) in
+            
+            self.getVehicle(vehicle, completion: self.resultify(subscriber: subscriber))
+            
+        }
+        
+        return future
+    }
+    
     public func getAllData(_ vehicle: Vehicle) -> Future<VehicleExtended, Error> {
         
         let future = Future<VehicleExtended,Error> { (subscriber: @escaping (Result<VehicleExtended, Error>) -> Void) in
@@ -178,14 +200,14 @@ extension TeslaSwift {
         guard let email = email,
             let vehicleToken = vehicle.tokens?.first else {
                 //dataReceived((nil, TeslaError.streamingMissingEmailOrVehicleToken))
-                let endpoint = StreamEndpoint.stream(email: "", vehicleToken: "", vehicleId: "\(vehicle.vehicleID!)")
-                return streamPublisher(endpoint: endpoint)
+                let authentication = TeslaStreamAuthentication(email: "", vehicleToken: "", vehicleId: "\(vehicle.vehicleID!)")
+                return streamPublisher(authentication: authentication)
         }
         
-        let endpoint = StreamEndpoint.stream(email: email, vehicleToken: vehicleToken, vehicleId: "\(vehicle.vehicleID!)")
+        let authentication = TeslaStreamAuthentication(email: email, vehicleToken: vehicleToken, vehicleId: "\(vehicle.vehicleID!)")
         
         
-        return streamPublisher(endpoint: endpoint)
+        return streamPublisher(authentication: authentication)
     }
 }
 
@@ -197,17 +219,17 @@ extension TeslaSwift  {
         public typealias Output = TeslaStreamingEvent
         public typealias Failure = Error
         
-        let endpoint: StreamEndpoint
+        let authentication: TeslaStreamAuthentication
         let stream: TeslaStreaming
         
-        init(endpoint: StreamEndpoint, stream: TeslaStreaming) {
-            self.endpoint = endpoint
+        init(authentication: TeslaStreamAuthentication, stream: TeslaStreaming) {
+            self.authentication = authentication
             self.stream = stream
         }
         
         public func receive<S>(subscriber: S) where S : Subscriber, TeslaStreamingPublisher.Failure == S.Failure, TeslaStreamingPublisher.Output == S.Input {
             
-            stream.openStream(endpoint: endpoint) {
+            stream.openStream(authentication: authentication) {
                 (streamEvent: TeslaStreamingEvent) in
                 
                 switch streamEvent {
@@ -232,9 +254,9 @@ extension TeslaSwift  {
         
     }
     
-    func streamPublisher(endpoint: StreamEndpoint) -> TeslaStreamingPublisher {
+    func streamPublisher(authentication: TeslaStreamAuthentication) -> TeslaStreamingPublisher {
         
-        return TeslaStreamingPublisher(endpoint: endpoint, stream: TeslaStreaming())
+        return TeslaStreamingPublisher(authentication: authentication, stream: TeslaStreaming())
     }
     
 }

@@ -7,7 +7,7 @@
 //
 
 import UIKit
-
+import CoreLocation
 
 class VehicleViewController: UIViewController {
 
@@ -20,7 +20,17 @@ class VehicleViewController: UIViewController {
         // Do any additional setup after loading the view.
     }
 
-	@IBAction func getTemps(_ sender: Any) {
+    @IBAction func getVehicle(_ sender: Any) {
+        if let vehicle = vehicle {
+            _ = api.getVehicle(vehicle).done {
+                (vehicle: Vehicle) -> Void in
+                self.textView.text = "Inside temp: \(vehicle.jsonString!)"
+            }
+        }
+        
+    }
+    
+    @IBAction func getTemps(_ sender: Any) {
 		if let vehicle = vehicle {
 			_ = api.getVehicleClimateState(vehicle).done {
 				(climateState: ClimateState) -> Void in
@@ -102,7 +112,7 @@ class VehicleViewController: UIViewController {
 	
 	@IBAction func command(_ sender: AnyObject) {
 		if let vehicle = vehicle {
-			_ = api.sendCommandToVehicle(vehicle, command: .setSeatHeater(seat: HeatedSeat.driver, level: HeatLevel.off)).done {
+            _ = api.sendCommandToVehicle(vehicle, command: .setMaxDefrost(on: false)).done {
 				(response:CommandResponse) -> Void in
 				self.textView.text = (response.result! ? "true" : "false")
 				if let reason = response.reason {
@@ -136,7 +146,16 @@ class VehicleViewController: UIViewController {
 		}
 		
 	}
-	
+    @IBAction func getNearbyChargingSites(_ sender: Any) {
+        if let vehicle = vehicle {
+            _ = api.getNearbyChargingSites(vehicle).done { (nearbyChargingSites: NearbyChargingSites) in
+                self.textView.text = "NearbyChargingSites:\n" +
+                nearbyChargingSites.jsonString!
+            }
+        }
+        
+    }
+    
 	override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 		super.prepare(for: segue, sender: sender)
 		

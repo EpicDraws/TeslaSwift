@@ -2,12 +2,30 @@
   "object": {
     "pins": [
       {
+        "package": "OHHTTPStubs",
+        "repositoryURL": "https://github.com/AliSoftware/OHHTTPStubs.git",
+        "state": {
+          "branch": "feature/spm-support",
+          "revision": "fda9902f8c5c4170c6914d7dc845174e8c75bf92",
+          "version": null
+        }
+      },
+      {
         "package": "PromiseKit",
         "repositoryURL": "https://github.com/mxcl/PromiseKit",
         "state": {
           "branch": null,
           "revision": "2fdb8c64a85e2081388532dbc61eb348a0793b1c",
           "version": "6.10.0"
+        }
+      },
+      {
+        "package": "RxSwift",
+        "repositoryURL": "https://github.com/ReactiveX/RxSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "b3e888b4972d9bc76495dd74d30a8c7fad4b9395",
+          "version": "5.0.1"
         }
       }
     ]

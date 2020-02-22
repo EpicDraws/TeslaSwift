@@ -8,11 +8,7 @@
 
 import Foundation
 import os.log
-
-public enum RoofState: String, Codable {
-	case close
-	case vent
-}
+import CoreLocation.CLLocation
 
 public enum VehicleCommand {
 	case valetMode(valetActivated: Bool, pin: String?)
@@ -25,10 +21,12 @@ public enum VehicleCommand {
 	case startCharging
 	case stopCharging
 	case flashLights
+    case triggerHomeLink(location: CLLocation)
 	case honkHorn
 	case unlockDoors
 	case lockDoors
 	case setTemperature(driverTemperature: Double, passengerTemperature: Double)
+    case setMaxDefrost(on: Bool)
 	case startAutoConditioning
 	case stopAutoConditioning
 	case setSunRoof(state: RoofState, percentage: Int?)
@@ -41,7 +39,7 @@ public enum VehicleCommand {
 	case previousFavorite
 	case volumeUp
 	case volumeDown
-	case navigationRequest(options: NavigationRequestOptions)
+	case shareToVehicle(options: ShareToVehicleOptions)
 	case cancelSoftwareUpdate
 	case scheduleSoftwareUpdate
 	case speedLimitSetLimit(speed: Measurement<UnitSpeed>)
@@ -51,6 +49,7 @@ public enum VehicleCommand {
 	case setSeatHeater(seat: HeatedSeat, level: HeatLevel)
 	case setSteeringWheelHeater(on: Bool)
 	case sentryMode(activated: Bool)
+    case windowControl(state: WindowState)
 	
 	func path() -> String {
 		switch self {
@@ -74,6 +73,8 @@ public enum VehicleCommand {
 			return "command/charge_stop"
 		case .flashLights:
 			return "command/flash_lights"
+        case .triggerHomeLink:
+            return "command/trigger_homelink"
 		case .honkHorn:
 			return "command/honk_horn"
 		case .unlockDoors:
@@ -82,6 +83,8 @@ public enum VehicleCommand {
 			return "command/door_lock"
 		case .setTemperature:
 			return "command/set_temps"
+        case .setMaxDefrost:
+            return "command/set_preconditioning_max"
 		case .startAutoConditioning:
 			return "command/auto_conditioning_start"
 		case .stopAutoConditioning:
@@ -106,12 +109,12 @@ public enum VehicleCommand {
 			return "command/media_volume_up"
 		case .volumeDown:
 			return "command/media_volume_down"
-		case .navigationRequest:
-            		return "command/navigation_request"
+		case .shareToVehicle:
+            return "command/share"
 		case .scheduleSoftwareUpdate:
-            		return "command/schedule_software_update"
+            return "command/schedule_software_update"
 		case .cancelSoftwareUpdate:
-            		return "command/cancel_software_update"
+            return "command/cancel_software_update"
 		case .speedLimitSetLimit:
 			return "command/speed_limit_set_limit"
 		case .speedLimitActivate:
@@ -126,6 +129,8 @@ public enum VehicleCommand {
 			return "command/remote_steering_wheel_heater_request"
 		case .sentryMode:
 			return "command/set_sentry_mode"
+        case .windowControl:
+            return "command/window_control"
 		}
 	}
 }
@@ -303,6 +308,42 @@ extension TeslaSwift {
         }
 		
 	}
+    
+    /**
+    Fetchs the summary of a vehicle
+    
+    - returns: A completion handler with a Vehicle.
+    */
+    public func getVehicle(_ vehicleID: String, completion: @escaping (Result<Vehicle, Error>) -> ()) -> Void {
+        
+        checkAuthentication { (result: Result<AuthToken, Error>) in
+            
+            switch result {
+            case .failure(let error):
+                completion(Result.failure(error))
+            case .success(_):
+                
+                self.request(.vehicleSummary(vehicleID: vehicleID), body: nullBody) { (result: Result<Response<Vehicle>, Error>) in
+                    switch result {
+                    case .failure(let error):
+                        completion(Result.failure(error))
+                    case .success(let data):
+                        completion(Result.success(data.response))
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    /**
+    Fetchs the summary of a vehicle
+    
+    - returns: A completion handler with a Vehicle.
+    */
+    public func getVehicle(_ vehicle: Vehicle, completion: @escaping (Result<Vehicle, Error>) -> ()) -> Void {
+        return getVehicle(vehicle.id!, completion: completion)
+    }
 	
     /**
      Fetchs the vehicle data
@@ -618,13 +659,19 @@ extension TeslaSwift {
             case .success(_):
                 
     			switch command {
+                case let .setMaxDefrost(on: state):
+                    let body = MaxDefrostCommandOptions(state: state)
+                    self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
+                case let .triggerHomeLink(coordinates):
+                    let body = HomeLinkCommandOptions(coordinates: coordinates)
+                    self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
 				case let .valetMode(valetActivated, pin):
                     let body = ValetCommandOptions(valetActivated: valetActivated, pin: pin)
                     self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
 				case let .openTrunk(options):
 					let body = options
 					self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
-                case let .navigationRequest(address):
+                case let .shareToVehicle(address):
                     let body = address
                     self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
 				case let .chargeLimitPercentage(limit):
@@ -660,6 +707,9 @@ extension TeslaSwift {
                 case let .sentryMode(activated):
                      let body = SentryModeCommandOptions(activated: activated)
                      self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
+                case let .windowControl(state):
+                    let body = WindowControlCommandOptions(command: state)
+                    self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
 				default:
                     let body = nullBody
 					self.request(Endpoint.command(vehicleID: vehicle.id!, command: command), body: body, completion: completion)
@@ -751,7 +801,9 @@ extension TeslaSwift {
 					if let wwwauthenticate = httpResponse.allHeaderFields["Www-Authenticate"] as? String,
 						wwwauthenticate.contains("invalid_token") {
 						completion(Result.failure(TeslaError.tokenRevoked))
-					} else if let mapped = try? teslaJSONDecoder.decode(ErrorMessage.self, from: data) {
+                    } else if httpResponse.allHeaderFields["Www-Authenticate"] != nil, httpResponse.statusCode == 401 {
+                        completion(Result.failure(TeslaError.authenticationFailed))
+                    } else if let mapped = try? teslaJSONDecoder.decode(ErrorMessage.self, from: data) {
                         completion(Result.failure(TeslaError.networkError(error: NSError(domain: "TeslaError", code: httpResponse.statusCode, userInfo:[ErrorInfo: mapped]))))
 					} else {
                         completion(Result.failure(TeslaError.networkError(error: NSError(domain: "TeslaError", code: httpResponse.statusCode, userInfo: nil))))
@@ -869,9 +921,9 @@ extension TeslaSwift {
 				return
 		}
 		
-		let endpoint = StreamEndpoint.stream(email: email, vehicleToken: vehicleToken, vehicleId: "\(vehicle.vehicleID!)")
+		let authentication = TeslaStreamAuthentication(email: email, vehicleToken: vehicleToken, vehicleId: "\(vehicle.vehicleID!)")
 		
-		streaming.openStream(endpoint: endpoint, dataReceived: dataReceived)
+		streaming.openStream(authentication: authentication, dataReceived: dataReceived)
 	}
 
 	/**
