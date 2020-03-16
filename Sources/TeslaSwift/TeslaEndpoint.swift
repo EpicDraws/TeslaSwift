@@ -52,7 +52,7 @@ extension Endpoint {
 		case .guiSettings(let vehicleID):
 			return "/api/1/vehicles/\(vehicleID)/data_request/gui_settings"
         case .nearbyChargingSites(let vehicleID):
-            return "/api/1/vehicles/\(vehicleID)/nearby_charging_sites"
+            return "/api/1/vehicles/\(vehicleID)/nearby_charging_sites.json"
 		case .vehicleState(let vehicleID):
 			return "/api/1/vehicles/\(vehicleID)/data_request/vehicle_state"
 		case .vehicleConfig(let vehicleID):
