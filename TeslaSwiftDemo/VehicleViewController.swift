@@ -46,7 +46,7 @@ class VehicleViewController: UIViewController {
 				(chargeState: ChargeState) -> Void in
 				
 				self.textView.text = "Battery: \(chargeState.batteryLevel!) % (\(chargeState.idealBatteryRange!.kms) km)\n" +
-				"charge rate: \(chargeState.chargeRate!.kms) km/h\n" +
+                    "charge rate: \(chargeState.chargeRate!.kilometersPerHour) km/h\n" +
 				"energy added: \(chargeState.chargeEnergyAdded!) kWh\n" +
 				"distance added (ideal): \(chargeState.chargeDistanceAddedIdeal!.kms) km\n" +
 				"power: \(chargeState.chargerPower ?? 0) kW\n" +
@@ -155,6 +155,20 @@ class VehicleViewController: UIViewController {
         }
         
     }
+    @IBAction func refreshToken(_ sender: Any) {
+        api.refreshToken { (result: Result<AuthToken, Error>) in
+            DispatchQueue.main.async {
+                do {
+                    let token = try result.get().accessToken
+                    self.textView.text = "New access Token:\n" + (token ?? "")
+                } catch {
+                    self.textView.text = "Refresh Token:\n CATCH"
+                }
+            }
+            
+        }
+       }
+    
     
 	override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 		super.prepare(for: segue, sender: sender)

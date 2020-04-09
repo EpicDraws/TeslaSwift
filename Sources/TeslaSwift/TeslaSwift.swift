@@ -140,6 +140,8 @@ public enum TeslaError: Error, Equatable {
 	case authenticationRequired
 	case authenticationFailed
 	case tokenRevoked
+    case noTokenToRefresh
+    case tokenRefreshFailed
 	case invalidOptionsForCommand
 	case failedToParseData
 	case streamingMissingEmailOrVehicleToken
@@ -188,14 +190,11 @@ extension TeslaSwift {
     public func authenticate(email: String, password: String, completion: @escaping (Result<AuthToken, Error>) -> ()) -> Void {
 		
 		self.email = email
-        UserDefaults.standard.set(email, forKey: "TeslaSwift.email")
 		self.password = password
 
 		let body = AuthTokenRequest(email: email,
 		                            password: password,
-		                            grantType: "password",
-		                            clientID: "81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384",
-		                            clientSecret: "c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3")
+                                    grantType: .password)
 		
         
         request(.authentication, body: body) { (result: Result<AuthToken, Error>) in
@@ -219,7 +218,41 @@ extension TeslaSwift {
         }
         
 	}
-	
+    
+    /**
+    Performs the token refresh with the Tesla API
+    
+    - returns: A completion handler with the AuthToken.
+    */
+
+    public func refreshToken(completion: @escaping (Result<AuthToken, Error>) -> ()) -> Void {
+        guard let token = self.token else {
+            completion(Result.failure(TeslaError.noTokenToRefresh))
+            return
+        }
+        let body = AuthTokenRequest(grantType: .refreshToken, refreshToken: token.refreshToken)
+        
+        request(.authentication, body: body) { (result: Result<AuthToken, Error>) in
+                  
+                  switch result {
+                  case .success(let token):
+                      self.token = token
+                      completion(Result.success(token))
+                  case .failure(let error):
+                      if case let TeslaError.networkError(error: internalError) = error {
+                          if internalError.code == 401 {
+                              completion(Result.failure(TeslaError.tokenRefreshFailed))
+                          } else {
+                              completion(Result.failure(error))
+                          }
+                      } else {
+                          completion(Result.failure(error))
+                      }
+                  }
+                  
+              }
+        
+    }
 	
 	/**
 	Use this method to reuse a previous authentication token
